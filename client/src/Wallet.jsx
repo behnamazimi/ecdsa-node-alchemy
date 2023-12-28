@@ -1,27 +1,44 @@
+import { useEffect, useState } from "react";
 import server from "./server";
+import { secp256k1 } from "ethereum-cryptography/secp256k1";
+import { toHex } from "ethereum-cryptography/utils";
 
-function Wallet({ address, setAddress, balance, setBalance }) {
-  async function onChange(evt) {
-    const address = evt.target.value;
-    setAddress(address);
-    if (address) {
-      const {
-        data: { balance },
-      } = await server.get(`balance/${address}`);
-      setBalance(balance);
-    } else {
-      setBalance(0);
+function Wallet({ privateKey, setPrivateKey, balance, setBalance }) {
+  const [address, setAddress] = useState("");
+
+  useEffect(() => {
+    setBalance(0);
+    setAddress("");
+
+    let extractedAddress = "";
+    try {
+      extractedAddress = toHex(secp256k1.getPublicKey(privateKey));
+      console.log(extractedAddress);
+      setAddress(extractedAddress);
+    } catch (e) {
+      console.log(e.message);
     }
-  }
+
+    if (extractedAddress) {
+      server.get(`balance/${extractedAddress}`).then(({ data: { balance } }) => {
+        setBalance(balance);
+      });
+    }
+  }, [privateKey])
 
   return (
     <div className="container wallet">
       <h1>Your Wallet</h1>
 
       <label>
-        Wallet Address
-        <input placeholder="Type an address, for example: 0x1" value={address} onChange={onChange}></input>
+        Private key:
+        <input
+          placeholder="Type your private key"
+          value={privateKey}
+          onChange={(e) => setPrivateKey(e.target.value)} />
       </label>
+
+      <div>Adress: {address.slice(0, 15)}...</div>
 
       <div className="balance">Balance: {balance}</div>
     </div>
